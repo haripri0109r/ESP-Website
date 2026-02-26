@@ -42,7 +42,7 @@ from django.views.generic import TemplateView
 from django.views.generic.base import RedirectView
 from filebrowser.sites import site as filebrowser_site
 
-# main list of apps
+# apps
 import argcache.urls
 import debug_toolbar
 import esp.accounting.urls
@@ -57,7 +57,6 @@ import esp.themes.urls
 import esp.users.urls
 import esp.varnish.urls
 
-#TODO: move these out of the main urls.py
 from esp.web.views import main
 import esp.qsd.views
 import esp.db.views
@@ -66,19 +65,17 @@ import esp.utils.views
 
 autodiscover(admin_site)
 
-# Override error pages
 handler404 = 'esp.utils.web.error404'
 handler500 = 'esp.utils.web.error500'
 
-# Static media
 urlpatterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + staticfiles_urlpatterns()
 
-# Robots.txt
+# Robots
 urlpatterns += [
     url('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain"))
 ]
 
-# Admin stuff
+# Admin
 urlpatterns += [
     url(r'^admin_tools/', include('admin_tools.urls')),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
@@ -88,20 +85,26 @@ urlpatterns += [
     url(r'^admin/filebrowser/', filebrowser_site.urls),
     url(r'^admin/', admin_site.urls),
     url(r'^accounts/login/$', esp.users.views.CustomLoginView.as_view()),
-    url(r'^(?P<subsection>(learn|teach|program|help|manage|onsite))/?$', RedirectView.as_view(url='/%(subsection)s/index.html', permanent=True)),
 ]
 
-# Adds missing trailing slash to any admin urls that haven't been matched yet.
+# Generic
 urlpatterns += [
-    url(r'^(?P<url>admin($|(.*[^/]$)))', RedirectView.as_view(url='/%(url)s/', permanent=True))]
-
-# generic stuff
-urlpatterns += [
-    url(r'^$', main.home), # index
-    url(r'^set_csrf_token', main.set_csrf_token), # tiny view used to set csrf token
+    url(r'^$', main.home),
+    url(r'^set_csrf_token', main.set_csrf_token),
 ]
 
-# main list of apps (please consolidate more things into this!)
+
+
+urlpatterns += [
+    # 5 segments
+    url(r'^(onsite|manage|teach|learn|volunteer|json)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/?$', main.program),
+
+    # 4 segments
+    url(r'^(onsite|manage|teach|learn|volunteer|json)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/?$', main.program),
+]
+
+
+
 urlpatterns += [
     url(r'^cache/', include(argcache.urls)),
     url(r'^__debug__/', include(debug_toolbar.urls)),
@@ -109,54 +112,40 @@ urlpatterns += [
     url(r'^customforms', include(esp.customforms.urls)),
     url(r'^random', include(esp.random.urls)),
     url(r'^', include(esp.formstack.urls)),
-    url(r'^',  include(esp.program.urls)),
+    url(r'^', include(esp.program.urls)),   # now safe
     url(r'^download', include(esp.qsdmedia.urls)),
-    url(r'^',  include(esp.survey.urls)),
+    url(r'^', include(esp.survey.urls)),
     url('^javascript_tests', include(esp.tests.urls)),
     url(r'^themes', include(esp.themes.urls)),
     url(r'^myesp/', include(esp.users.urls)),
     url(r'^varnish/', include(esp.varnish.urls)),
 ]
 
+# Teacher bios
 urlpatterns += [
-    # bios
     url(r'^(?P<tl>teach|learn)/teachers/', include('esp.web.urls')),
 ]
 
-# Specific .html pages that have defaults
+# FAQ + Contact
 urlpatterns += [
     url(r'^(faq|faq\.html)$', main.FAQView.as_view(), name='FAQ'),
     url(r'^(contact|contact\.html)$', main.ContactUsView.as_view(), name='Contact Us'),
 ]
 
+# QSD handler
 urlpatterns += [
     url(r'^(?P<url>.*)\.html$', esp.qsd.views.qsd),
 ]
 
-# QSD Media
-# aseering 8/14/2007: This ought to be able to be written in a simpler way...
+# Archives + misc
 urlpatterns += [
-    # aseering - Is it worth consolidating these?  Two entries for the single "contact us! widget
-    # Contact Us! pages
-    url(r'^contact/contact/?$', main.contact),
-    url(r'^contact/contact/(?P<section>[^/]+)/?$', main.contact),
-
-    # Program stuff
-    url(r'^(onsite|manage|teach|learn|volunteer|json)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/?$', main.program),
-    url(r'^(onsite|manage|teach|learn|volunteer|json)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/?$', main.program),
-
-    # all the archives
     url(r'^archives/([-A-Za-z0-9_ ]+)/?$', main.archives),
     url(r'^archives/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/?$', main.archives),
     url(r'^archives/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/([-A-Za-z0-9_ ]+)/?$', main.archives),
-
     url(r'^email/([0-9]+)/?$', main.public_email),
 ]
 
-urlpatterns += [
-url(r'^(?P<subsection>onsite|manage|teach|learn|volunteer)/(?P<program>[-A-Za-z0-9_ ]+)/?$', RedirectView.as_view(url='/%(subsection)s/%(program)s/index.html', permanent=True))]
-
-
+# Template override
 urlpatterns += [
     url(r'^manage/templateoverride/(?P<template_id>[0-9]+)',
         esp.utils.views.diff_templateoverride),
